@@ -1,0 +1,111 @@
+services:
+  catalog-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalog
+    volumes:
+      - catalog_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+      POSTGRES_DB: orders
+    volumes:
+      - order_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5438:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: notifications
+      POSTGRES_PASSWORD: notifications
+      POSTGRES_DB: notifications
+    volumes:
+      - notification_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5439:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notifications"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5680:5680"
+      - "15680:15680"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  catalog-service:
+    build: ./services/catalog-service
+    ports:
+      - "4001:4001"
+    environment:
+      DATABASE_URL: postgres://catalog:catalog@catalog-db:5432/catalog
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+
+  order-service:
+    build: ./services/order-service
+    ports:
+      - "4002:4002"
+    environment:
+      DATABASE_URL: postgres://orders:orders@order-db:5432/orders
+      CATALOG_SERVICE_URL: http://catalog-service:4001
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5680
+    depends_on:
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "4003:4003"
+    environment:
+      DATABASE_URL: postgres://notifications:notifications@notification-db:5432/notifications
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5680
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend/suilens-frontend
+    ports:
+      - "5174:5174"
+    environment:
+      VITE_CATALOG_API: http://localhost:4001
+      VITE_ORDER_API: http://localhost:4002
+
+volumes:
+  catalog_pgdata:
+  order_pgdata:
+  notification_pgdata:
