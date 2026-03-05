@@ -1,8 +1,16 @@
 import { db } from './index';
-import { branches, inventory } from './schema';
+import { branches, inventory, reservations } from './schema';
+import { sql } from 'drizzle-orm';
 
 async function seed() {
   console.log('🌱 Seeding inventory database...');
+
+  // 🧹 CLEAN OLD DATA FIRST (prevent doubles)
+  console.log('🧹 Cleaning old data...');
+  await db.delete(reservations);  // Delete reservations first (foreign keys)
+  await db.delete(inventory);
+  await db.delete(branches);
+  console.log('✅ Old data cleaned');
 
   // Insert branches
   const branchData = [
@@ -23,7 +31,7 @@ async function seed() {
     },
   ];
 
-  await db.insert(branches).values(branchData).onConflictDoNothing();
+  await db.insert(branches).values(branchData);
   console.log('✅ Inserted 3 branches');
 
   // Sample lens IDs (you should replace these with actual lens IDs from catalog-service)
@@ -74,7 +82,7 @@ async function seed() {
     });
   });
 
-  await db.insert(inventory).values(inventoryData).onConflictDoNothing();
+  await db.insert(inventory).values(inventoryData);
   console.log(`✅ Inserted ${inventoryData.length} inventory records`);
 
   console.log('🎉 Seed completed!');
