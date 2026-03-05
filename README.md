@@ -1,12 +1,10 @@
 # Suilens - Sistem Rental Lensa Studio Komet Biru
 
-**Bagian 3: Penugasan Mandiri - Sistem Reservasi Multi-Branch dengan Saga Pattern**
+**Bagian 3: Penugasan Mandiri - Studio Komet Biru**
 ## 👤 Author
 
 **Georgina Elena Shinta Dewi Achti**  
-- 📧 NPM: 2206810995
-- 📅 Date: 4 Maret 2026
-- 🏢 Studio Komet Biru
+NPM: 2206810995
 
 ---
 
@@ -75,10 +73,6 @@ User → Order Service (cancel order)
 suilens-a1-part3/
 ├── docker-compose.yml              # Orchestration
 ├── README.md                       # This file (D1)
-├── D2_ARCHITECTURE_DIAGRAM.md      # Architecture diagrams
-├── D3_COMPARISON_ESSAY.md          # Microservices vs Monolith analysis
-├── R3_COMPENSATING_ACTIONS.md      # Evidence of saga implementation
-├── TESTING_GUIDE.md                # Screenshot & testing instructions
 │
 ├── frontend/suilens-frontend/
 │   ├── Dockerfile
