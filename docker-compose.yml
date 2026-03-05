@@ -47,11 +47,27 @@ services:
       timeout: 3s
       retries: 5
 
+  inventory-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory
+    volumes:
+      - inventory_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     ports:
-      - "5680:5680"
-      - "15680:15680"
+      - "5680:5672"
+      - "15680:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -67,6 +83,7 @@ services:
     depends_on:
       catalog-db:
         condition: service_healthy
+    command: sh -c "bun run migrate && bun run seed && bun run src/index.ts"
 
   order-service:
     build: ./services/order-service
@@ -75,7 +92,8 @@ services:
     environment:
       DATABASE_URL: postgres://orders:orders@order-db:5432/orders
       CATALOG_SERVICE_URL: http://catalog-service:4001
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5680
+      INVENTORY_SERVICE_URL: http://inventory-service:4004
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       order-db:
         condition: service_healthy
@@ -83,6 +101,23 @@ services:
         condition: service_healthy
       catalog-service:
         condition: service_started
+      inventory-service:
+        condition: service_started
+    command: sh -c "bun run migrate && bun run seed && bun run src/index.ts"
+
+  inventory-service:
+    build: ./services/inventory-service
+    ports:
+      - "4004:4004"
+    environment:
+      DATABASE_URL: postgres://inventory:inventory@inventory-db:5432/inventory
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: sh -c "bun run migrate && bun run seed && bun run dev & bun run consumer & wait"
 
   notification-service:
     build: ./services/notification-service
@@ -90,12 +125,13 @@ services:
       - "4003:4003"
     environment:
       DATABASE_URL: postgres://notifications:notifications@notification-db:5432/notifications
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5680
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       notification-db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    command: sh -c "bun run migrate && bun run seed && bun run src/index.ts"
 
   frontend:
     build: ./frontend/suilens-frontend
@@ -104,8 +140,10 @@ services:
     environment:
       VITE_CATALOG_API: http://localhost:4001
       VITE_ORDER_API: http://localhost:4002
+      VITE_INVENTORY_API: http://localhost:4004
 
 volumes:
   catalog_pgdata:
   order_pgdata:
   notification_pgdata:
+  inventory_pgdata:
