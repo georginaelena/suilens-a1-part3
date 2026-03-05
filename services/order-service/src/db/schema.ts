@@ -10,6 +10,7 @@ export const orders = pgTable('orders', {
   customerEmail: varchar('customer_email', { length: 255 }).notNull(),
   lensId: uuid('lens_id').notNull(),
   lensSnapshot: jsonb('lens_snapshot').notNull(),
+  branchCode: varchar('branch_code', { length: 20 }).notNull(),
   startDate: timestamp('start_date').notNull(),
   endDate: timestamp('end_date').notNull(),
   totalPrice: numeric('total_price', { precision: 12, scale: 2 }).notNull(),
