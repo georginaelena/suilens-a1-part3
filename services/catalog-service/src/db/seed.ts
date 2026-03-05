@@ -1,6 +1,8 @@
 
+import { count } from 'drizzle-orm';
 import { db } from './index';
 import { lenses } from './schema';
+
 const seedLenses = [
   {
     id: '550e8400-e29b-41d4-a716-446655440001',
@@ -63,18 +65,22 @@ const seedLenses = [
     description: 'Wide-angle prime with exceptional sharpness.',
   },
 ];
+
 async function seed() {
   console.log('🌱 Seeding catalog lenses...');
-  
-  // 🧹 Clean old data first
-  console.log('🧹 Cleaning old catalog data...');
-  await db.delete(lenses);
-  console.log('✅ Old data cleaned');
-  
+
+  const lensCountResult = await db.select({ value: count() }).from(lenses);
+  const lensCount = lensCountResult[0]?.value ?? 0;
+  if (lensCount > 0) {
+    console.log(`⏭️ Skip catalog seed: data already exists (${lensCount} lenses)`);
+    process.exit(0);
+  }
+
   await db.insert(lenses).values(seedLenses);
   console.log(`✅ Seeded ${seedLenses.length} lenses.`);
   process.exit(0);
 }
+
 seed().catch((error) => {
   console.error(error);
   process.exit(1);

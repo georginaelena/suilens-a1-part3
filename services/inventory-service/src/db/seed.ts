@@ -1,18 +1,20 @@
+import { count } from 'drizzle-orm';
 import { db } from './index';
-import { branches, inventory, reservations } from './schema';
-import { sql } from 'drizzle-orm';
+import { branches, inventory } from './schema';
 
 async function seed() {
   console.log('🌱 Seeding inventory database...');
 
-  // 🧹 CLEAN OLD DATA FIRST (prevent doubles)
-  console.log('🧹 Cleaning old data...');
-  await db.delete(reservations);  // Delete reservations first (foreign keys)
-  await db.delete(inventory);
-  await db.delete(branches);
-  console.log('✅ Old data cleaned');
+  const branchCountResult = await db.select({ value: count() }).from(branches);
+  const branchCount = branchCountResult[0]?.value ?? 0;
+  const inventoryCountResult = await db.select({ value: count() }).from(inventory);
+  const inventoryCount = inventoryCountResult[0]?.value ?? 0;
 
-  // Insert branches
+  if (branchCount > 0 || inventoryCount > 0) {
+    console.log(`⏭️ Skip inventory seed: data already exists (${branchCount} branches, ${inventoryCount} inventory rows)`);
+    process.exit(0);
+  }
+
   const branchData = [
     {
       code: 'KB-JKT-S',
@@ -34,26 +36,22 @@ async function seed() {
   await db.insert(branches).values(branchData);
   console.log('✅ Inserted 3 branches');
 
-  // Sample lens IDs (you should replace these with actual lens IDs from catalog-service)
-  // For now, we'll use placeholder UUIDs - these need to match your catalog-service seed data
   const sampleLensIds = [
-    '550e8400-e29b-41d4-a716-446655440001', // Example lens 1
-    '550e8400-e29b-41d4-a716-446655440002', // Example lens 2
-    '550e8400-e29b-41d4-a716-446655440003', // Example lens 3
-    '550e8400-e29b-41d4-a716-446655440004', // Example lens 4
-    '550e8400-e29b-41d4-a716-446655440005', // Example lens 5
+    '550e8400-e29b-41d4-a716-446655440001',
+    '550e8400-e29b-41d4-a716-446655440002',
+    '550e8400-e29b-41d4-a716-446655440003',
+    '550e8400-e29b-41d4-a716-446655440004',
+    '550e8400-e29b-41d4-a716-446655440005',
   ];
 
-  // Create inventory distribution across branches
   const inventoryData: Array<{
     lensId: string;
     branchCode: string;
     totalQuantity: number;
     availableQuantity: number;
   }> = [];
-  
-  // KB-JKT-S (main studio) - has most stock
-  sampleLensIds.forEach((lensId, idx) => {
+
+  sampleLensIds.forEach((lensId) => {
     inventoryData.push({
       lensId,
       branchCode: 'KB-JKT-S',
@@ -62,7 +60,6 @@ async function seed() {
     });
   });
 
-  // KB-JKT-E (secondary) - moderate stock
   sampleLensIds.slice(0, 4).forEach((lensId) => {
     inventoryData.push({
       lensId,
@@ -72,7 +69,6 @@ async function seed() {
     });
   });
 
-  // KB-JKT-N (newest) - limited stock
   sampleLensIds.slice(0, 3).forEach((lensId) => {
     inventoryData.push({
       lensId,
