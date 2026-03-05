@@ -142,7 +142,7 @@ cd suilens-a1-part3
 
 # 2. Clean start (delete old data + fresh seed)
 docker compose down -v
-docker compose up --build -d
+docker compose up -d --build
 
 # 3. Wait for services to be healthy (~30 seconds)
 sleep 30
@@ -170,7 +170,7 @@ open http://localhost:15680
 docker compose down
 
 # Start again
-docker compose up -d
+docker compose up -d --build
 ```
 
 ### Verification
